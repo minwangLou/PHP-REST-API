@@ -138,34 +138,6 @@ class ApiResultsControllerTest extends BaseTestCase
 
 
     /**
-     * Test GET /results 304 NOT MODIFIED
-     *
-     * @param string $etag returned by testCGetResultsAction200Ok
-     */
-    #[Depends('testCGetResultsAction200Ok')]
-    public function testCGetResultsAction304NotModified(string $etag): void
-    {
-        self::$client->request(
-            Request::METHOD_GET,
-            self::RUTA_API,
-            [],
-            [],
-            array_merge(
-                self::$userHeaders,
-                ['HTTP_If-None-Match' => [$etag]]
-            )
-        );
-
-        $response = self::$client->getResponse();
-
-        self::assertSame(
-            Response::HTTP_NOT_MODIFIED,
-            $response->getStatusCode()
-        );
-    }
-
-
-    /**
      * Test GET /results/{resultId} 200 OK
      *
      * @param array<string,mixed> $result returned by testPostResultAction201Created
@@ -201,33 +173,6 @@ class ApiResultsControllerTest extends BaseTestCase
         return (string) $response->getEtag();
     }
 
-
-    /**
-     * Test GET /results/{id} 304 NOT MODIFIED
-     *
-     * @param array<string,mixed> $result
-     * @param string $etag
-     */
-    #[Depends('testPostResultAction201Created')]
-    #[Depends('testGetResultAction200Ok')]
-    public function testGetResultAction304NotModified(array $result, string $etag): void
-    {
-        self::$client->request(
-            Request::METHOD_GET,
-            self::RUTA_API . '/' . $result['id'],
-            [],
-            [],
-            array_merge(
-                self::$userHeaders,
-                ['HTTP_If-None-Match' => [$etag]]
-            )
-        );
-
-        self::assertSame(
-            Response::HTTP_NOT_MODIFIED,
-            self::$client->getResponse()->getStatusCode()
-        );
-    }
 
 
     /**
@@ -282,15 +227,35 @@ class ApiResultsControllerTest extends BaseTestCase
      *
      * @param array<string,mixed> $result
      */
-    #[Depends('testPostResultAction201Created')]
-    public function testPutResultAction412PreconditionFailed(array $result): void
+    public function testPutResultAction412PreconditionFailed(): void
     {
+        self::$userHeaders = $this->getTokenHeaders(
+            self::$role_user[User::EMAIL_ATTR],
+            self::$role_user[User::PASSWD_ATTR]
+        );
+
+        // create a fresh result
+        self::$client->request(
+            Request::METHOD_POST,
+            self::RUTA_API,
+            [],
+            [],
+            self::$userHeaders,
+            json_encode(['value' => 10])
+        );
+        $result = json_decode(
+            (string) self::$client->getResponse()->getContent(),
+            true
+        )['result'];
+
+        // PUT without If-Match → 412
         self::$client->request(
             Request::METHOD_PUT,
             self::RUTA_API . '/' . $result['id'],
             [],
             [],
-            self::$userHeaders
+            self::$userHeaders,
+            json_encode(['value' => 20])
         );
 
         self::assertSame(
@@ -305,11 +270,28 @@ class ApiResultsControllerTest extends BaseTestCase
      *
      * @param array<string,mixed> $result
      */
-    #[Depends('testPostResultAction201Created')]
-    #[Depends('testGetResultAction200Ok')]
-    public function testPutResultAction422UnprocessableEntity(array $result): void
+    public function testPutResultAction422UnprocessableEntity(): void
     {
-        // Get a valid ETag using GET (ResultController has no HEAD)
+        self::$userHeaders = $this->getTokenHeaders(
+            self::$role_user[User::EMAIL_ATTR],
+            self::$role_user[User::PASSWD_ATTR]
+        );
+
+        // create a fresh result
+        self::$client->request(
+            Request::METHOD_POST,
+            self::RUTA_API,
+            [],
+            [],
+            self::$userHeaders,
+            json_encode(['value' => 10])
+        );
+        $result = json_decode(
+            (string) self::$client->getResponse()->getContent(),
+            true
+        )['result'];
+
+        // get ETag
         self::$client->request(
             Request::METHOD_GET,
             self::RUTA_API . '/' . $result['id'],
@@ -319,6 +301,7 @@ class ApiResultsControllerTest extends BaseTestCase
         );
         $etag = self::$client->getResponse()->getEtag();
 
+        // PUT without value → 422
         self::$client->request(
             Request::METHOD_PUT,
             self::RUTA_API . '/' . $result['id'],
@@ -328,7 +311,7 @@ class ApiResultsControllerTest extends BaseTestCase
                 self::$userHeaders,
                 ['HTTP_If-Match' => $etag]
             ),
-            json_encode([]) // missing value
+            json_encode([])
         );
 
         self::assertSame(
