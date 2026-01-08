@@ -157,8 +157,8 @@ class ApiResultsQueryController extends AbstractController implements ApiResults
     public function optionsAction(int|null $resultId): Response
     {
         $methods = $resultId !== 0
-            ? [ Request::METHOD_GET, Request::METHOD_PUT, Request::METHOD_DELETE ]
-            : [ Request::METHOD_GET, Request::METHOD_POST ];
+            ? [ Request::METHOD_GET, Request::METHOD_PUT, Request::METHOD_DELETE]
+            : [ Request::METHOD_GET, Request::METHOD_POST];
 
         $methods[] = Request::METHOD_OPTIONS;
 

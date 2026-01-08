@@ -10,5 +10,6 @@ interface ApiResultsQueryInterface
 
     public function cgetAction(Request $request): Response;
     public function getAction(Request $request, int $resultId): Response;
-    public function optionsAction(?int $resultId): Response;
+    public function optionsAction(int|null $resultId): Response;
+    public function statsAction(Request $request): Response;
 }

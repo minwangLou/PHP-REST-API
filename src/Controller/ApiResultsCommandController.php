@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
     path: ApiResultsQueryInterface::RUTA_API,
     name: 'api_results_'
 )]
-class ApiResultsCommandController extends AbstractController
+class ApiResultsCommandController extends AbstractController implements ApiResultsCommandInterface
 {
     private const string ROLE_ADMIN = 'ROLE_ADMIN';
 
