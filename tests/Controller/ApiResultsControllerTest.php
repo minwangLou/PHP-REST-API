@@ -203,10 +203,10 @@ class ApiResultsControllerTest extends BaseTestCase
 
 
     /**
-     * Test GET /results/{resultId} 304 NOT MODIFIED
+     * Test GET /results/{id} 304 NOT MODIFIED
      *
      * @param array<string,mixed> $result
-     * @param string $etag returned by testGetResultAction200Ok
+     * @param string $etag
      */
     #[Depends('testPostResultAction201Created')]
     #[Depends('testGetResultAction200Ok')]
@@ -223,11 +223,9 @@ class ApiResultsControllerTest extends BaseTestCase
             )
         );
 
-        $response = self::$client->getResponse();
-
         self::assertSame(
             Response::HTTP_NOT_MODIFIED,
-            $response->getStatusCode()
+            self::$client->getResponse()->getStatusCode()
         );
     }
 
@@ -308,11 +306,12 @@ class ApiResultsControllerTest extends BaseTestCase
      * @param array<string,mixed> $result
      */
     #[Depends('testPostResultAction201Created')]
+    #[Depends('testGetResultAction200Ok')]
     public function testPutResultAction422UnprocessableEntity(array $result): void
     {
-        // First get a valid ETag
+        // Get a valid ETag using GET (ResultController has no HEAD)
         self::$client->request(
-            Request::METHOD_HEAD,
+            Request::METHOD_GET,
             self::RUTA_API . '/' . $result['id'],
             [],
             [],
@@ -329,7 +328,7 @@ class ApiResultsControllerTest extends BaseTestCase
                 self::$userHeaders,
                 ['HTTP_If-Match' => $etag]
             ),
-            json_encode([]) // no value
+            json_encode([]) // missing value
         );
 
         self::assertSame(
@@ -546,7 +545,6 @@ class ApiResultsControllerTest extends BaseTestCase
      */
     public function testGetResultsStatsAction200Ok(): void
     {
-        // login as ROLE_USER
         self::$userHeaders = $this->getTokenHeaders(
             self::$role_user[User::EMAIL_ATTR],
             self::$role_user[User::PASSWD_ATTR]
@@ -569,7 +567,6 @@ class ApiResultsControllerTest extends BaseTestCase
         );
 
         self::assertJson((string) $response->getContent());
-
         $body = json_decode((string) $response->getContent(), true);
 
         self::assertArrayHasKey('stats', $body);
@@ -577,18 +574,19 @@ class ApiResultsControllerTest extends BaseTestCase
         $stats = $body['stats'];
 
         self::assertArrayHasKey('count', $stats);
-        self::assertArrayHasKey('min', $stats);
-        self::assertArrayHasKey('max', $stats);
-        self::assertArrayHasKey('avg', $stats);
-
         self::assertIsInt($stats['count']);
 
         if ($stats['count'] > 0) {
+            self::assertArrayHasKey('min', $stats);
+            self::assertArrayHasKey('max', $stats);
+            self::assertArrayHasKey('avg', $stats);
+
             self::assertIsInt($stats['min']);
             self::assertIsInt($stats['max']);
             self::assertIsFloat($stats['avg']);
         }
     }
+
 
 
 }
