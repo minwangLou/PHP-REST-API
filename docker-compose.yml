@@ -1,0 +1,53 @@
+# https://medium.com/@romaricp/the-perfect-kit-starter-for-a-symfony-4-project-with-docker-and-php-7-2-fda447b6bca1
+
+services:
+    apache:
+        build:
+          context: .
+          dockerfile: .docker/apache/Dockerfile
+        container_name: sf4_apache
+        ports:
+          - "80:80"
+        volumes:
+          - .docker/config/vhosts:/etc/apache2/sites-enabled
+          - .:/home/wwwroot/sf4
+        depends_on:
+          - php
+
+    mysql:
+        image: mysql:9.1
+        # command: "--default-authentication-plugin=mysql_native_password --lower_case_table_names=2"
+        command: "--lower_case_table_names=2"
+        container_name: sf4_mysql
+        volumes:
+            - .docker/data/db:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: miw_api_users
+            MYSQL_USER: miw_api_users
+            MYSQL_PASSWORD: miw_api_users
+        ports:
+          - "3306:3306"
+
+    php:
+        build:
+          context: .docker/php
+          dockerfile: Dockerfile
+        container_name: sf4_php
+        volumes:
+          - .:/home/wwwroot/sf4:rw
+        environment:
+          DATABASE_URL: mysql://miw_api_users:miw_api_users@sf4_mysql:3306/miw_api_users?serverVersion=9.1.0&charset=utf8mb4
+        ports:
+          - "9000:9000"
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: sf4_phpmyadmin
+        environment:
+          PMA_HOST: mysql
+          PMA_PORT: 3306
+        ports:
+          - "8080:80"
+        links:
+          - mysql
